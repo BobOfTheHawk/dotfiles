@@ -1,0 +1,1 @@
+- tools i use : Btop, yazi, fastfetch, fzf, grep, tmux, vim, nvim, zoxide, autin, eza
