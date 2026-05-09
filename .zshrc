@@ -45,6 +45,9 @@ zinit light hlissner/zsh-autopair
 # ── Syntax highlighting (must be last plugin) ──────────────
 zinit light zsh-users/zsh-syntax-highlighting
 
+# ── You Should Use ─────────────────────────────────────────
+export YSU_MODE=ALL
+
 # ── Gruvbox syntax highlight colors ───────────────────────
 ZSH_HIGHLIGHT_STYLES[command]='fg=#b8bb26,bold'
 ZSH_HIGHLIGHT_STYLES[alias]='fg=#b8bb26'
@@ -117,16 +120,21 @@ ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=#a89984"
 
 # ── eza (better ls) ────────────────────────────────────────
 alias l='eza --icons --group-directories-first'
+alias ls='l'
 alias la='eza -la --icons --group-directories-first --git'
 alias lt='eza --tree --icons --level=2 --git'
 alias lta='eza --tree --icons --level=2 -a --no-permissions --no-filesize --no-user --no-time --git --ignore-glob=".git"'
 alias ll='eza -l --icons --git'
 
-# ── bat ────────────────────────────────────────────────────
+# ── bat (better cat + man pages) ──────────────────────────
 alias cat='bat --theme=gruvbox-dark --style=numbers,changes,header'
+export MANPAGER="sh -c 'col -bx | bat --theme=gruvbox-dark -l man -p'"
 
 # ── delta (better git diff) ────────────────────────────────
 export GIT_PAGER="delta"
+
+# ── fzf file finder ────────────────────────────────────────
+alias nf='vim $(fzf --preview "bat --theme=gruvbox-dark --color=always {}")'
 
 # ── Aliases ────────────────────────────────────────────────
 alias myip='curl ifconfig.me'
@@ -140,10 +148,8 @@ alias lsblk='lsblk | bat -l conf -p --theme-dark=gruvbox-dark'
 
 # ── PATH & ENV ─────────────────────────────────────────────
 export PATH="$HOME/.local/bin:$PATH"
-export MANPAGER="less -R --use-color -Dd+r -Du+b"
 export MANROFFOPT="-c"
 
-# FIXED: Includes hidden files but stays out of .git
 export FZF_DEFAULT_COMMAND='fd --type f --hidden --exclude .git'
 export FZF_DEFAULT_OPTS='--preview "bat --theme=gruvbox-dark --color=always {} 2>/dev/null || ls {}" --height 60% --reverse --border'
 
@@ -205,4 +211,3 @@ pokemon-colorscripts --no-title -s -r | fastfetch -c $HOME/.config/fastfetch/con
 if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
   source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
 fi
-
