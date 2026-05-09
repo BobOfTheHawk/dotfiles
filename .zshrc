@@ -1,6 +1,6 @@
 # ── Silence p10k console warning ──────────────────────────
 typeset -g POWERLEVEL9K_INSTANT_PROMPT=quiet
-
+typeset -g POWERLEVEL9K_INSTANT_PROMPT=off
 # Enable Powerlevel10k instant prompt
 if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
   source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
@@ -18,6 +18,7 @@ HISTSIZE=10000
 SAVEHIST=10000
 setopt SHARE_HISTORY
 setopt HIST_IGNORE_DUPS
+export CM_DIR="$HOME/.cache"
 
 # ── Options ────────────────────────────────────────────────
 setopt CORRECT
@@ -83,20 +84,17 @@ eval "$(atuin init zsh)"
 bindkey -v
 KEYTIMEOUT=1
 
-# Fix backspace after returning from normal mode
 bindkey -M viins '^?' backward-delete-char
 bindkey -M viins '^H' backward-delete-char
 
-# Open current command in Neovim with 'v' in normal mode
 autoload -Uz edit-command-line
 zle -N edit-command-line
 bindkey -M vicmd 'v' edit-command-line
 
-# Cursor shape: beam in insert, block in normal
 function zle-keymap-select zle-line-init {
   case $KEYMAP in
-    vicmd)      print -n '\e[1 q' ;;  # block
-    viins|main) print -n '\e[5 q' ;;  # beam
+    vicmd)      print -n '\e[1 q' ;;
+    viins|main) print -n '\e[5 q' ;;
   esac
   zle reset-prompt
 }
@@ -104,7 +102,6 @@ zle -N zle-keymap-select
 zle -N zle-line-init
 
 # ── Keybinds ───────────────────────────────────────────────
-# Atuin in both insert and normal mode
 bindkey -M viins '^K' _atuin_search_widget
 bindkey -M viins '^J' _atuin_search_widget
 bindkey -M viins '^[[A' _atuin_search_widget
@@ -119,21 +116,17 @@ bindkey -M viins '^F' autosuggest-accept
 ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=#a89984"
 
 # ── eza (better ls) ────────────────────────────────────────
-alias ls='eza --icons --group-directories-first'
 alias l='eza --icons --group-directories-first'
 alias la='eza -la --icons --group-directories-first --git'
-alias lt='eza --tree --icons --level=2'
+alias lt='eza --tree --icons --level=2 --git'
+alias lta='eza --tree --icons --level=2 -a --no-permissions --no-filesize --no-user --no-time --git --ignore-glob=".git"'
 alias ll='eza -l --icons --git'
 
-# ── bat (better cat + man pages) ───────────────────────────
+# ── bat ────────────────────────────────────────────────────
 alias cat='bat --theme=gruvbox-dark --style=numbers,changes,header'
-export MANPAGER="sh -c 'col -bx | bat --theme=gruvbox-dark -l man -p'"
 
 # ── delta (better git diff) ────────────────────────────────
 export GIT_PAGER="delta"
-
-# ── fzf file finder ────────────────────────────────────────
-alias nf='vim $(fzf --preview "bat --theme=gruvbox-dark --color=always {}")'
 
 # ── Aliases ────────────────────────────────────────────────
 alias myip='curl ifconfig.me'
@@ -143,11 +136,73 @@ alias reload='source ~/.zshrc'
 alias f='fastfetch'
 alias v='vim'
 alias nv='nvim'
+alias lsblk='lsblk | bat -l conf -p --theme-dark=gruvbox-dark'
 
-# ── PATH ───────────────────────────────────────────────────
+# ── PATH & ENV ─────────────────────────────────────────────
 export PATH="$HOME/.local/bin:$PATH"
+export MANPAGER="less -R --use-color -Dd+r -Du+b"
+export MANROFFOPT="-c"
 
-# Display Pokemon-colorscripts
-# Project page: https://gitlab.com/phoneybadger/pokemon-colorscripts#on-other-distros-and-macos
-#pokemon-colorscripts --no-title -s -r #without fastfetch
+# FIXED: Includes hidden files but stays out of .git
+export FZF_DEFAULT_COMMAND='fd --type f --hidden --exclude .git'
+export FZF_DEFAULT_OPTS='--preview "bat --theme=gruvbox-dark --color=always {} 2>/dev/null || ls {}" --height 60% --reverse --border'
+
+# ── Functions ──────────────────────────────────────────────
+
+fcd() {
+  local dir=$(fd --type d --hidden --exclude .git | fzf --preview 'tree -C {} 2>/dev/null || ls -F {} | head -20')
+  [[ -n $dir ]] && cd "$dir"
+}
+
+fkill() {
+  local pid=$(ps aux | fzf --preview 'echo {}' --preview-window=down:3:wrap | awk '{print $2}')
+  [[ -n $pid ]] && kill -9 $pid
+}
+
+fh() {
+  print -z $(fc -l 1 | fzf --preview-window=hidden | sed 's/ *[0-9]* *//')
+}
+
+ff() {
+  local file=$(fzf)
+  [[ -n $file ]] && nvim "$file"
+}
+
+fpurge() {
+  local pkg=$(pacman -Q | fzf --preview 'pacman -Qi {1}' | awk '{print $1}')
+  [[ -n $pkg ]] && sudo pacman -Rns $pkg
+}
+
+fins() {
+  local pkg=$(pacman -Ss | fzf --preview 'pacman -Si {1}' | awk '{print $1}')
+  [[ -n $pkg ]] && sudo pacman -S $pkg
+}
+
+fgit() {
+  local branch=$(git branch | fzf --preview-window=hidden | sed 's/^[ *]*//')
+  [[ -n $branch ]] && git checkout "$branch"
+}
+
+fstop() {
+  local service=$(systemctl list-units --type=service | fzf --preview-window=hidden | awk '{print $1}')
+  [[ -n $service ]] && sudo systemctl stop "$service"
+}
+
+fcat() {
+  local file=$(fzf)
+  [[ -n $file ]] && bat "$file"
+}
+
+fcopy() {
+  local file=$(fzf)
+  [[ -n $file ]] && cat "$file" | xclip -selection clipboard
+}
+
+# Put this BEFORE the instant prompt lines
 pokemon-colorscripts --no-title -s -r | fastfetch -c $HOME/.config/fastfetch/config-pokemon.jsonc --logo-type file-raw --logo-height 10 --logo-width 5 --logo -
+
+# Enable Powerlevel10k instant prompt (this must come after)
+if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
+  source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
+fi
+
